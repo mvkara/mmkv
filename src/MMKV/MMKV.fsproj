@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Serialisers.fs" />
+    <Compile Include="Storage.fs" />
+    <Compile Include="CommonTypes.fs" />
+    <Compile Include="CommonUtils.fs" />
+    <Compile Include="ImmutableLookup.fs" />
+    <Compile Include="AppendableLookup.fs" />
+    <Content Include="app.config" />
+    <None Include="TestAppendableLookup.fsx" />
+    <None Include="TestFixedSizeFieldDictionary.fsx" />
+    <None Include="TestImmutableLookup.fsx" />
+    <Compile Include="FixedSizeFieldDictionary.fs" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>

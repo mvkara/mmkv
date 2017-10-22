@@ -1,0 +1,6 @@
+/.vs
+/paket-files
+/src/MMKV/obj
+/src/MMKV/bin
+/test/MMKV.Unit/obj
+/test/MMKV.Unit/bin

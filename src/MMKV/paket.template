@@ -1,0 +1,12 @@
+type project
+id MMKV
+version 0.0.1
+authors mvkra
+description
+  Key-Value data structures using memory mapped files as the backing structure.
+projectUrl
+  https://github.com/mvkra/mmkv
+tags
+  memory-map-file
+  key-value
+include-pdbs true
