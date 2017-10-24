@@ -31,15 +31,13 @@ type FixedSizeFieldDictionary<'tk, 'tv> =
 /// This allows a very optional usage of memory without the need for compaction of the file data on 
 /// element removal.
 module FixedSizeFieldDictionary =
-    
-    //let indexSerialiser : IFixedSizeSerialiser<FileBackedDictionaryIndex> = Serialisers.Marshalling.serialiser
-
     let inline private blockSizeOffset (d: FixedSizeFieldDictionary<_, _>) = d.KeySerialiser.FixedSizeOf + d.ValueSerialiser.FixedSizeOf |> locationPointer
-
-    let deserialiseObject (serialiser: IFixedSizeSerialiser<_>) (openedFile: IOpenedFile) serialisationBuffer indexOffset  = 
+    
+    let private deserialiseObject (serialiser: IFixedSizeSerialiser<_>) (openedFile: IOpenedFile) serialisationBuffer indexOffset  = 
         openedFile.ReadArray indexOffset serialisationBuffer
         serialiser.Deserialise serialisationBuffer
 
+    [<CompiledName("Create")>]
     let create 
         (keySerialiser: IFixedSizeSerialiser<_>)
         (valueSerialiser: IFixedSizeSerialiser<_>)
@@ -75,6 +73,7 @@ module FixedSizeFieldDictionary =
             currentIndex <- currentIndex + 1
         openedFile.Flush()
 
+    [<CompiledName("OpenFile")>]
     let openFile<'tk, 'tv when 'tk : equality> 
         (keySerialiser: IFixedSizeSerialiser<'tk>) 
         (valueSerialiser: IFixedSizeSerialiser<'tv>) 
@@ -113,6 +112,7 @@ module FixedSizeFieldDictionary =
         let serialisationBuffer = Array.zeroCreate (int d.ValueSerialiser.FixedSizeOf) |> ArraySegment<_>
         CommonUtils.deserialiseFromFile d.ValueSerialiser d.OpenedFile serialisationBuffer (locationPointerOfBlock + locationPointer d.KeySerialiser.FixedSizeOf)
 
+    [<CompiledName("TryGetValue")>]
     let tryGetValue k (d: FixedSizeFieldDictionary<'tk, 'tv>) = 
         match d.KeyToMemoryMappedLocation.TryGetValue(k) with
         | (true, v) -> 
@@ -122,6 +122,7 @@ module FixedSizeFieldDictionary =
         
     let inline private getLastElementPointer (d: FixedSizeFieldDictionary<_, _>) = d.LastPointer - (blockSizeOffset d)
 
+    [<CompiledName("Remove")>]
     let remove (k: 'tk) (d: FixedSizeFieldDictionary<'tk, 'tv>) = 
         
         let blockSize = blockSizeOffset d
@@ -159,6 +160,7 @@ module FixedSizeFieldDictionary =
                removeCommon()
             | (false, _) -> ()
         
+    [<CompiledName("Add")>]
     let add k v (d: FixedSizeFieldDictionary<'tk, 'tv>) = 
         
         let addInternal locationToSaveEntryTo =
@@ -176,6 +178,7 @@ module FixedSizeFieldDictionary =
             CommonUtils.writeInt64ToLocation d.OpenedFile 0L<LocationPointer> (int64 d.Count)
             d.LastPointer <- d.LastPointer + blockSizeOffset d
 
+    [<CompiledName("AsSeq")>]
     let asSeq (d: FixedSizeFieldDictionary<'tk, 'tv>) : struct ('tk * 'tv) seq = seq {
         for kv in d.KeyToMemoryMappedLocation do
         yield struct (kv.Key, readValueFromLocation d kv.Value.Index)

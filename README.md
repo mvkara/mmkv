@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This library contains key-value data structures powered under the hood via a storage mechanism of choice.
+This library contains data structures powered under the hood via a storage mechanism of choice. It aims to decouple the data structure selected from the memory/data storage used to store its contents.
 
 ## Use cases
 
@@ -68,3 +68,11 @@ let collection = ImmutableLookup.openFile<KeyType, ValueType> keySerialiser valu
 ```
 let values : ValueType seq = ImmutableLookup.tryGetValue 3
 ```
+
+## Building the library
+
+The build is compatible with the standard dotnet cli tooling. 
+
+- Simply run "dotnet build" to build the solution.
+- Run the console app under test/MKKV.Unit to run unit tests (i.e using dotnet run).
+- Run the "paket.exe pack ${location}" command to create the Nuget package and output it to the location specified.

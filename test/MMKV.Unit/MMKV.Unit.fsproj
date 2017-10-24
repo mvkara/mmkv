@@ -1,6 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\MMKV\MMKV.fsproj">
@@ -8,13 +10,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="app.config" />
+    <None Include="paket.references" />
     <Compile Include="Utils.fs" />
     <Compile Include="ImmutableLookupTest.fs" />
-    <Content Include="app.config" />
     <Compile Include="AppendableLookupTest.fs" />
     <Compile Include="FixedSizeFieldDictionaryTest.fs" />
     <Compile Include="TestRunner.fs" />
-    <None Include="paket.references" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

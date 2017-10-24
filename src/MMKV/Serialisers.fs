@@ -15,10 +15,6 @@ type IFixedSizeSerialiser<'t> =
     inherit ISerialiser<'t>
     abstract member FixedSizeOf: int64
 
-type Serialiser<'t, 'ts when 'ts :> ISerialiser<'t>> = unit -> 'ts
-
-type CSharpSerialiserFactory<'tv, 'ts when 'ts :> ISerialiser<'tv>> = Func<unit, 'ts>
-
 /// Contains the marshalling serialiser which by default is also used for serialising keys.
 /// Effectively it is a simple mem-copy of all the fields of the structure being serialised.
 /// To use this serialiser the value to be serialised must be a struct that can be sized and

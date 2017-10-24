@@ -12,12 +12,6 @@ type IOpenedFile =
     abstract member ReadArray: position: int64<LocationPointer> -> ArraySegment<byte> -> unit
     abstract member Flush: unit -> unit
 
-// A file that supports direct memory mapping of structs (e.g memory mapped files)
-type IStructStorageFile = 
-    inherit IOpenedFile
-    abstract member Read<'t when 't : (new: unit -> 't) and 't : struct and 't :> ValueType> : position: int64<LocationPointer> -> 't
-    abstract member Write<'t when 't : struct and 't : (new: unit -> 't) and 't :> ValueType> : data: 't -> position: int64<LocationPointer> -> unit
-
 /// A memory/file allocator that must be allocated with a fixed size and can't grow (e.g an array, a memory mapped file, etc).
 type IFixedFileFactory =     
     abstract member CreateFileWithCapacity: capacity: int64 -> fileLocation: string -> IOpenedFile

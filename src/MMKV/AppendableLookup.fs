@@ -32,19 +32,15 @@ type AppendableLookup<'tk, 'tv when 'tk : equality> =
 /// in order to avoid a large amount of disk seeking and better preemption when loading the index file.
 /// Note: All keys must be of a fixed size and be able to be marshalled.
 module AppendableLookup =
-    
     let private sizeOfLengthHeader = sizeof<int64> |> int64
-
     let private indexSerialiser : IFixedSizeSerialiser<AppendableLookupIndex> = Serialisers.Marshalling.serialiser
     let private indexDataOffset = locationPointer indexSerialiser.FixedSizeOf
-
-    let indexEntrySize = Serialisers.Marshalling.serialiser<AppendableLookupIndex>.FixedSizeOf
+    let private indexEntrySize = Serialisers.Marshalling.serialiser<AppendableLookupIndex>.FixedSizeOf
 
     let inline private getCountOfFile (opf: IOpenedFile) = CommonUtils.getInt64AtLocation opf 0L<LocationPointer>
 
     let inline private writeNewCount (opf: IOpenedFile) count = 
         CommonUtils.writeInt64ToLocation opf 0L<LocationPointer> count
-
 
     let private addEntryToFiles
         (al: AppendableLookup<_, _>)
@@ -201,6 +197,7 @@ module AppendableLookup =
             deserialisationBuffer
             indexOffset
 
+    [<CompiledName("AddValueToLookup")>]
     /// Adds a value to the sequence at the provided key.
     let addValueToLookup k v (d: AppendableLookup<'tk, 'tv>) = 
 
@@ -215,6 +212,7 @@ module AppendableLookup =
 
         d.KeyToMemoryMappedLocation.[k] <- indexEntry.ValueLocation :: listToAddTo
 
+    [<CompiledName("AsSeq")>]
     let asSeq (d: AppendableLookup<'tk, 'tv>) : struct ('tk * 'tv seq) seq = seq {
         for kv in d.KeyToMemoryMappedLocation do
         yield struct (kv.Key, kv.Value |> Seq.map (fun x -> deserialiseValueFromLocation d.ValueSerialiser d.DataFile x))

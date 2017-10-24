@@ -35,10 +35,11 @@ type ImmutableLookup<'tk, 'tv when 'tk : struct> =
 /// Note: All keys and values must be able to be serialised to a fixed width; order inside each lookup is in FIFO order (a stack).
 module ImmutableLookup =
     
-    let countHeaderSize = sizeof<int64> |> int64
+    let private countHeaderSize = sizeof<int64> |> int64
 
-    let lengthFieldPointer = 0L<LocationPointer>
+    let private lengthFieldPointer = 0L<LocationPointer>
 
+    [<CompiledName("Create")>]
     let create (keySerialiser: IFixedSizeSerialiser<'tk>) (valueSerialiser: IFixedSizeSerialiser<'tv>) (openFileFactory: IFixedFileFactory) (fileLocation: string) (d: IDictionary<'tk, #ICollection<'tv>>) =
         
         let indexEntrySerialiser : IFixedSizeSerialiser<ImmutableLookupIndex> = Serialisers.Marshalling.serialiser
@@ -83,6 +84,7 @@ module ImmutableLookup =
 
         openedFile.Flush()
 
+    [<CompiledName("CreateWithDefaultSerialiser")>]
     let createWithDefaultSerialiser (openFileFactory: IFixedFileFactory) (fileLocation: string) (d: IDictionary<'tk, #ICollection<'tv>>) = 
         create Serialisers.Marshalling.serialiser Serialisers.Marshalling.serialiser openFileFactory fileLocation d
 
@@ -95,18 +97,21 @@ module ImmutableLookup =
         let arr = Array.zeroCreate<byte> (int v.Length) |> ArraySegment<_>
         MKKV.CommonUtils.deserialiseFromFile s va arr v.Index
 
-    /// Gets the series of values from the memory mapped file given the key
-    /// Note that the memory mapped file is used lazily upon evaluation of the sequence.
+    /// Gets the series of values from the lookup given the key
+    /// Note that the storage data source access/deserialisation is done lazily upon evaluation of the sequence.
+    [<CompiledName("TryGetValue")>]
     let tryGetValue k (d: ImmutableLookup<'tk, 'tv>) : struct (bool * 'tv seq) = 
         match d.KeyToMemoryMappedLocation.TryGetValue(k) with
         | (true, v) -> struct (true, v |> Seq.map (fun x -> deserialiseFromLocation d.ValueSerialiser d.OpenedFile x))
         | (false, _) -> struct (false, [] :>_)
 
+    [<CompiledName("AsSeq")>]
     let asSeq (d: ImmutableLookup<'tk, 'tv>) : struct ('tk * 'tv seq) seq = seq {
         for kv in d.KeyToMemoryMappedLocation do
         yield struct (kv.Key, kv.Value |> Seq.map (fun x -> deserialiseFromLocation d.ValueSerialiser d.OpenedFile x))
     }
 
+    [<CompiledName("OpenFile")>]
     let openFile<'tk, 'tv when 'tk : struct and 'tk : (new: unit -> 'tk) and 'tk : equality> 
         (keySerialiser: IFixedSizeSerialiser<'tk>)
         (valueSerialiser: IFixedSizeSerialiser<'tv>) 
@@ -144,6 +149,7 @@ module ImmutableLookup =
 
         read (lengthFieldPointer + (locationPointer countHeaderSize)) 0L
         
+    [<CompiledName("OpenFileWithDefaultSerialiser")>]
     let openFileWithDefaultSerialiser<'tk, 'tv when 'tk : struct and 'tk : (new: unit -> 'tk) and 'tk : equality and 'tv : struct> (openFileFactory: IFixedFileFactory) (fileLocation: string) = 
         openFile<'tk, 'tv> Serialisers.Marshalling.serialiser Serialisers.Marshalling.serialiser openFileFactory fileLocation
     
