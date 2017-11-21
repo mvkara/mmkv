@@ -5,3 +5,4 @@
 /test/MMKV.Unit/obj
 /test/MMKV.Unit/bin
 /packages
+/.paket/load

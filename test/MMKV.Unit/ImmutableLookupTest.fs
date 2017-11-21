@@ -2,7 +2,8 @@ namespace MMKV.Unit
 
 open Expecto
 open FsCheck
-open MKKV.Storage
+open MMKV.Storage
+open MMKV.Serialisers
 open MMKV
     
 module ImmutableLookupTest =
@@ -25,9 +26,9 @@ module ImmutableLookupTest =
 
                 let inputDataToCompare = typeToTest |> Seq.groupBy fst |> Seq.map (fun (key, group) -> (key, group |> Seq.map snd |> Seq.toArray)) |> Seq.toArray
                 let storage = MemoryStreamStorage.createNewFileFactory()
-                ImmutableLookup.createWithDefaultSerialiser storage "Dummy" (inputDataToCompare |> dict)
+                ImmutableLookup.create Marshalling.serialiser Marshalling.serialiser storage "Dummy" (inputDataToCompare |> dict)
 
-                use lookup = ImmutableLookup.openFileWithDefaultSerialiser<int, TestStruct> storage "Dummy"
+                use lookup = ImmutableLookup.openFile<int, TestStruct> Marshalling.serialiser Marshalling.serialiser storage "Dummy"
                 try
                     let result = lookup |> ImmutableLookup.asSeq |> Seq.map (fun struct (key, list) -> (key, list |> Seq.toArray |> Array.rev)) |> Seq.toArray
                     (inputDataToCompare |> Map.ofSeq) |> Expect.equal (result |> Map.ofSeq)

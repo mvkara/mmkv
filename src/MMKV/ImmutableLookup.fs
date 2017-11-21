@@ -8,8 +8,8 @@ open System.Runtime.InteropServices
 open System.Runtime.Serialization.Formatters
 open System.Runtime.Serialization.Formatters.Binary
 open MMKV.Serialisers
-open MKKV.Storage
-open MKKV.CommonUtils
+open MMKV.Storage
+open MMKV.CommonUtils
 
 type [<Struct; CLIMutable>] internal ImmutableLookupIndex = {
     ValueLocationWithVariableLength: ValueLocationWithVariableLength
@@ -84,10 +84,6 @@ module ImmutableLookup =
 
         openedFile.Flush()
 
-    [<CompiledName("CreateWithDefaultSerialiser")>]
-    let createWithDefaultSerialiser (openFileFactory: IFixedFileFactory) (fileLocation: string) (d: IDictionary<'tk, #ICollection<'tv>>) = 
-        create Serialisers.Marshalling.serialiser Serialisers.Marshalling.serialiser openFileFactory fileLocation d
-
     let private updateDictWithValueLocation key valueLocation (d: IDictionary<_, _ list>) = 
         match d.TryGetValue(key) with
         | (true, l) -> d.[key] <- valueLocation :: l
@@ -95,7 +91,7 @@ module ImmutableLookup =
 
     let inline private deserialiseFromLocation<'t> (s: ISerialiser<'t>) (va: IOpenedFile) (v: ValueLocationWithVariableLength) = 
         let arr = Array.zeroCreate<byte> (int v.Length) |> ArraySegment<_>
-        MKKV.CommonUtils.deserialiseFromFile s va arr v.Index
+        MMKV.CommonUtils.deserialiseFromFile s va arr v.Index
 
     /// Gets the series of values from the lookup given the key
     /// Note that the storage data source access/deserialisation is done lazily upon evaluation of the sequence.
@@ -148,8 +144,3 @@ module ImmutableLookup =
                 read (indexOffset + (locationPointer indexAndKeySize)) (currentCount + 1L)
 
         read (lengthFieldPointer + (locationPointer countHeaderSize)) 0L
-        
-    [<CompiledName("OpenFileWithDefaultSerialiser")>]
-    let openFileWithDefaultSerialiser<'tk, 'tv when 'tk : struct and 'tk : (new: unit -> 'tk) and 'tk : equality and 'tv : struct> (openFileFactory: IFixedFileFactory) (fileLocation: string) = 
-        openFile<'tk, 'tv> Serialisers.Marshalling.serialiser Serialisers.Marshalling.serialiser openFileFactory fileLocation
-    

@@ -1,4 +1,4 @@
-module MKKV.Unit.TestRunner
+module MMKV.Unit.TestRunner
 
 open Expecto
 open MMKV.Unit

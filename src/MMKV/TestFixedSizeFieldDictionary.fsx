@@ -61,7 +61,7 @@ let record3 = { record2 with ID = 4 }
 
 let sourceData = [ (1, record1); (2, { record2 with ID = record2.ID + 1}) ] |> dict 
 
-let storageMechanism = MKKV.Storage.MemoryStreamStorage.createNewFileFactory()
+let storageMechanism = MMKV.Storage.MemoryStreamStorage.createNewFileFactory()
 
 let dummyFileName = "./file.dat"
 

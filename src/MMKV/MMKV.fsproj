@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>MKKV</AssemblyName>
+    <AssemblyName>MMKV</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Serialisers.fs" />

@@ -1,10 +1,9 @@
 namespace MMKV.Unit
 
-open MKKV.Storage
+open MMKV.Storage
 open MMKV
 open System
 open FsCheck
-open System.Collections.Generic
 open Expecto.Tests
 open Expecto
     

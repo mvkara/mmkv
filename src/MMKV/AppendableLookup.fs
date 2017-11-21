@@ -5,10 +5,10 @@ open System.IO
 open System.IO.MemoryMappedFiles
 open System.Collections.Generic
 open System.Runtime.InteropServices
-open MKKV.Storage
+open MMKV.Storage
 open MMKV.Serialisers
-open MKKV.CommonUtils
-open MKKV
+open MMKV.CommonUtils
+open MMKV
 
 type [<Struct; CLIMutable>] internal AppendableLookupIndex = 
     { KeyLength: int; ValueLocation: ValueLocationWithVariableLength }
@@ -37,9 +37,9 @@ module AppendableLookup =
     let private indexDataOffset = locationPointer indexSerialiser.FixedSizeOf
     let private indexEntrySize = Serialisers.Marshalling.serialiser<AppendableLookupIndex>.FixedSizeOf
 
-    let inline private getCountOfFile (opf: IOpenedFile) = CommonUtils.getInt64AtLocation opf 0L<LocationPointer>
+    let private getCountOfFile (opf: IOpenedFile) = CommonUtils.getInt64AtLocation opf 0L<LocationPointer>
 
-    let inline private writeNewCount (opf: IOpenedFile) count = 
+    let private writeNewCount (opf: IOpenedFile) count = 
         CommonUtils.writeInt64ToLocation opf 0L<LocationPointer> count
 
     let private addEntryToFiles

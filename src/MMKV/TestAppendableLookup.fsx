@@ -61,7 +61,7 @@ let fileConfig = {
 let maxSizeOfFile = Marshal.SizeOf<TestRecord>()
 
 let serialiser = Serialisers.Marshalling.serialiser
-let storage = MKKV.Storage.MemoryStreamStorage.createNewFileFactory()
+let storage = MMKV.Storage.MemoryStreamStorage.createNewFileFactory()
 
 AppendableLookup.create 
     Serialisers.Marshalling.serialiser

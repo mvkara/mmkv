@@ -1,10 +1,7 @@
 namespace MMKV.Unit
 
-open MMKV.ImmutableLookup
-open System.IO
-open MKKV.Storage
+open MMKV.Storage
 open MMKV
-open MKKV.Unit.Utils
 open System
     
 module AppendableLookupTest =
@@ -27,13 +24,14 @@ module AppendableLookupTest =
         let buildInitialLookup() =
             
             let storage = MemoryStreamStorage.createNewFileFactory()
+            let rolloverStorage = RolloverComposedStorage.openFileFactory storage "MemoryStream" 1000L
             let serialiser = Serialisers.Marshalling.serialiser
 
             let indexAndDataFileConfig = { IndexAndDataFileConfig.IndexFile = "IndexFile"; DataFile = "DataFile"}
 
-            AppendableLookup.create serialiser serialiser storage indexAndDataFileConfig (Map.empty<int, List<TestStruct>>)
+            AppendableLookup.create serialiser serialiser rolloverStorage indexAndDataFileConfig (Map.empty<int, List<TestStruct>>)
 
-            AppendableLookup.openFile<int, TestStruct> serialiser serialiser storage indexAndDataFileConfig
+            AppendableLookup.openFile<int, TestStruct> serialiser serialiser rolloverStorage indexAndDataFileConfig
 
         let addCommand k v = {
             new Command<_, _>() with

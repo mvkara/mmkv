@@ -4,7 +4,7 @@ open System.IO.MemoryMappedFiles
 open System
 open System.Collections.Generic
 open MMKV.Serialisers
-open MKKV.Storage
+open MMKV.Storage
 
 /// A convienent wrapper for allowing null values inside a marshallable struct.
 /// It allows optional fields and their optionality to be serialised inside the dictionary if required.

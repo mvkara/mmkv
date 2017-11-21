@@ -1,5 +1,5 @@
-module MKKV.CommonUtils
-open MKKV.Storage
+module MMKV.CommonUtils
+open MMKV.Storage
 open System
 open MMKV.Serialisers
 

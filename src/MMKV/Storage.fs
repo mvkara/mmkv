@@ -1,4 +1,4 @@
-namespace MKKV.Storage
+namespace MMKV.Storage
 
 open System
 open System.IO.MemoryMappedFiles
@@ -16,6 +16,7 @@ type IOpenedFile =
 type IFixedFileFactory =     
     abstract member CreateFileWithCapacity: capacity: int64 -> fileLocation: string -> IOpenedFile
     abstract member OpenFile: fileLocation: string -> IOpenedFile
+    abstract member FileExists: fileLocation: string -> bool
 
 /// A memory/file allocator that can create storage regions that can grow in size.
 /// Normally these can also create with a minimum capacity hence provide more than a IFixedFileFactory.
@@ -53,6 +54,7 @@ module MemoryMappedFileStorage =
                 let mmf = MemoryMappedFile.CreateFromFile(fileLocation, FileMode.OpenOrCreate)
                 let vs = mmf.CreateViewStream()
                 { MemoryMappedFile = mmf; ViewStream = vs } :>_
+            member __.FileExists fileLocation = File.Exists(fileLocation)
         }
 
 type internal StreamOpenedFile = 
@@ -85,11 +87,12 @@ module StandardFileStorage =
             member __.OpenFile fileLocation = 
                 let fs = new FileStream(fileLocation, FileMode.Open)
                 { Stream = fs } :>_
+            member __.FileExists fileLocation = File.Exists(fileLocation)            
         }
 
 module MemoryStreamStorage =
     open System.Collections.Generic
-
+    
     type internal StreamOpenedFile = 
         { MemoryStream: MemoryStream
           FlushData: byte[] -> unit }
@@ -109,18 +112,17 @@ module MemoryStreamStorage =
                 x.MemoryStream.Seek(int64 toMove, SeekOrigin.Current) |> ignore    
                 x.MemoryStream.Read(arrayToReadInto.Array, arrayToReadInto.Offset, arrayToReadInto.Count) |> ignore
 
-
-    type MemoryStreamFileFactory() = 
+    let createNewFileFactory() = 
         let streamData = Dictionary<string, byte[]>()
 
-        interface IOpenedFileFactory with
+        { new IOpenedFileFactory with
             member __.CreateFile fileLocation = 
                 match streamData.TryGetValue(fileLocation) with
                 | (true, _) -> failwith "Trying to create a new memory stream region when one is already been created. Use another instance of MemoryMappedStreamFileFactory."
                 | (false, _) -> 
                     let stream = new MemoryStream()
                     { MemoryStream = stream; FlushData = fun d -> streamData.[fileLocation] <- d } :>_
-            member __.CreateFileWithCapacity capacity fileLocation = 
+            member __.CreateFileWithCapacity capacity fileLocation =
                 match streamData.TryGetValue(fileLocation) with
                 | (true, _) -> failwith "Trying to create a new memory stream region when one is already been created. Use another instance of MemoryMappedStreamFileFactory."
                 | (false, _) -> 
@@ -134,43 +136,93 @@ module MemoryStreamStorage =
                     stream.Seek(0L, SeekOrigin.Begin) |> ignore
                     { MemoryStream = stream; FlushData = fun d -> streamData.[fileLocation] <- d } :>_
                 | (false, _) -> failwith "File is not yet created on this memory stream factory"
+            member __.FileExists fileLocation = streamData.ContainsKey(fileLocation)          
+        }
 
-    let createNewFileFactory() = MemoryStreamFileFactory()
-
-(*
 /// Uses a rollover file strategy to promote a fixed allocation of data blocks into a variable length structure.
 /// It does this by creating more than one file, with a rollover for different segments.
 module RolloverComposedStorage = 
-
+    open System.Collections.Generic
+    
     type internal RolloverComposedStorageFile = 
         { FileFactory: IFixedFileFactory
-          RolloverSize: int64<LocationPointer>
-           }
-        interface IOpenedFile with
-            member x.Dispose() = 
-                x.FileStream.Flush()
-                x.FileStream.Dispose()
-            member x.WriteArray data position = 
-                x.FileStream.Seek(int64 position, SeekOrigin.Begin) |> ignore    
-                x.FileStream.Write(data.Array, data.Offset, data.Count)
-            member x.Flush() = x.FileStream.Flush()
-            member x.ReadArray position arrayToReadInto = 
-                x.FileStream.Seek(int64 position, SeekOrigin.Begin) |> ignore
-                x.FileStream.Read(arrayToReadInto.Array, arrayToReadInto.Offset, arrayToReadInto.Count) |> ignore
+          RolloverSize: int64
+          Files: Dictionary<int64, IOpenedFile>
+          FilePrefix: string
+          FileLocation: string }
+
+    let internal determineFileName fileLocation filePrefix fileNoToUse = Path.Combine(fileLocation, (sprintf "./%s-%i.rcsf" filePrefix fileNoToUse)) |> Path.GetFullPath
+
+    let internal getFileName rcs fileNoToUse = Path.Combine(rcs.FileLocation, determineFileName rcs.FileLocation rcs.FilePrefix fileNoToUse) |> Path.GetFullPath
+
+    let internal fileExists rcs fileNo = rcs.FileFactory.FileExists(getFileName rcs fileNo)    
+
+    let internal getRolloverFile (rcs: RolloverComposedStorageFile) fileNoToUse = 
+        match (rcs.Files.TryGetValue(fileNoToUse), fileExists rcs fileNoToUse) with
+        | ((true, f), _) -> f
+        | ((false, _), true) -> 
+            let f = rcs.FileFactory.OpenFile (getFileName rcs fileNoToUse)
+            rcs.Files.[fileNoToUse] <- f
+            f
+        | ((false, _), false) ->
+            let filePathToUse = getFileName rcs fileNoToUse
+            let f = rcs.FileFactory.CreateFileWithCapacity rcs.RolloverSize filePathToUse
+            rcs.Files.[fileNoToUse] <- f
+            f
+
+    let private performOperation operation (rcs: RolloverComposedStorageFile) (data: ArraySegment<byte>) position = 
+        let rec performOperationRec (currentPosition: int64<LocationPointer>) currentOffset countRemaining =
+            let fileNoToUse = currentPosition / (rcs.RolloverSize * 1L<LocationPointer>)
+            let positionInFile = currentPosition % (rcs.RolloverSize * 1L<LocationPointer>)
+            
+            let fileToUse = getRolloverFile rcs fileNoToUse
+
+            let bytesRemainingInCurrentFile = rcs.RolloverSize - (positionInFile / 1L<LocationPointer>)
+            let byteCount =  (min bytesRemainingInCurrentFile countRemaining) * 1L<LocationPointer>
+
+            let segmentToWrite = new ArraySegment<byte>(data.Array, currentOffset, int byteCount)
+            operation fileToUse currentPosition segmentToWrite
+            
+            let newCountRemaining = countRemaining - (int64 byteCount)
+            if countRemaining <> 0L
+            then performOperationRec (currentPosition + byteCount) (currentOffset + int byteCount) newCountRemaining
+
+        performOperationRec position 0 (int64 data.Count)
+
+    let private write = performOperation (fun (f: IOpenedFile) currentPos segment -> f.WriteArray segment currentPos)
+    let private read = performOperation (fun (f: IOpenedFile) currentPos segment -> f.ReadArray currentPos segment)
+
+    let private createOpenFileWithConfig (config: RolloverComposedStorageFile) = {
+        new IOpenedFile with
+            member __.Flush() = config.Files.Values |> Seq.iter (fun x -> x.Flush())
+            member __.ReadArray pos data = read config data pos
+            member __.WriteArray data pos = write config data pos
+            member this.Dispose() = this.Flush(); config.Files.Values |> Seq.iter (fun x -> x.Dispose())
+    }
 
     /// Retrieves a rollover factory.
-    let openFileFactory (fixedFileFactory: IFixedFileFactory) rolloverSizeInBytes = {
+    let openFileFactory (fixedFileFactory: IFixedFileFactory) filePrefix rolloverSizeInBytes = {
         new IOpenedFileFactory with
             member __.CreateFile fileLocation = 
-                let fs = new FileStream(fileLocation, FileMode.Create)
-                { FileStream = fs } :>_
+                createOpenFileWithConfig
+                    { FileFactory = fixedFileFactory
+                      RolloverSize = rolloverSizeInBytes
+                      Files = Dictionary<_, _>()
+                      FilePrefix = filePrefix
+                      FileLocation = fileLocation }
             member __.CreateFileWithCapacity capacity fileLocation = 
-                let fs = new FileStream(fileLocation, FileMode.Create)
-                fs.SetLength(capacity)
-                { FileStream = fs } :>_
+                createOpenFileWithConfig
+                    { FileFactory = fixedFileFactory
+                      RolloverSize = rolloverSizeInBytes
+                      Files = Dictionary<_, _>()
+                      FilePrefix = filePrefix
+                      FileLocation = fileLocation }
             member __.OpenFile fileLocation = 
-                let fs = new FileStream(fileLocation, FileMode.Open)
-                { FileStream = fs } :>_
+                createOpenFileWithConfig
+                    { FileFactory = fixedFileFactory
+                      RolloverSize = rolloverSizeInBytes
+                      Files = Dictionary<_, _>()
+                      FilePrefix = filePrefix
+                      FileLocation = fileLocation }
+            member __.FileExists fileLocation = fixedFileFactory.FileExists(determineFileName fileLocation filePrefix 0L)
         }
-
-*)

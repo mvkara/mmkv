@@ -1,4 +1,4 @@
-﻿module MKKV.Unit.Utils
+﻿module MMKV.Unit.Utils
 
 open System
 open System.IO

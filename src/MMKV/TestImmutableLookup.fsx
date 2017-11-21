@@ -61,9 +61,9 @@ let record3 = { record2 with ID = 4 }
 
 let sourceData = [ (1, [|record1|]); (3, Array.init 10000 (fun x -> { record2 with ID = x + 1})) ] |> dict 
 
-let storageMechanism = MKKV.Storage.MemoryStreamStorage.createNewFileFactory()
+let storageMechanism = MMKV.Storage.MemoryStreamStorage.createNewFileFactory()
 
-ImmutableLookup.createWithDefaultSerialiser storageMechanism "./file.dat" sourceData
+ImmutableLookup.create Serialisers.Marshalling.serialiser Serialisers.Marshalling.serialiser storageMechanism "./file.dat" sourceData
 printfn "File created"
 
 let fileDict = ImmutableLookup.openFileWithDefaultSerialiser<int, TestRecord> storageMechanism "./file.dat"

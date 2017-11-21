@@ -2,10 +2,10 @@ namespace MMKV
 
 open System
 open System.Collections.Generic
-open MKKV.Storage
+open MMKV.Storage
 open MMKV.Serialisers
-open MKKV.CommonUtils
-open MKKV
+open MMKV.CommonUtils
+open MMKV
 
 type [<Struct; CLIMutable>] FileBackedDictionaryIndex = {
     CurrentLocation: ValueLocationWithFixedLength
@@ -33,10 +33,6 @@ type FixedSizeFieldDictionary<'tk, 'tv> =
 module FixedSizeFieldDictionary =
     let inline private blockSizeOffset (d: FixedSizeFieldDictionary<_, _>) = d.KeySerialiser.FixedSizeOf + d.ValueSerialiser.FixedSizeOf |> locationPointer
     
-    let private deserialiseObject (serialiser: IFixedSizeSerialiser<_>) (openedFile: IOpenedFile) serialisationBuffer indexOffset  = 
-        openedFile.ReadArray indexOffset serialisationBuffer
-        serialiser.Deserialise serialisationBuffer
-
     [<CompiledName("Create")>]
     let create 
         (keySerialiser: IFixedSizeSerialiser<_>)
