@@ -1,7 +1,7 @@
 framework: netstandard2.0, netcoreapp2.0, net471
 source https://www.nuget.org/api/v2
 
-nuget FSharp.Core ~> 4 redirects:force
+nuget FSharp.Core >= 4 redirects:force
 nuget FsCheck
 nuget Microsoft.NET.Test.Sdk
 nuget Expecto
